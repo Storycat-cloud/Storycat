@@ -337,18 +337,19 @@ const Dashboard = () => {
       .order('created_at', { ascending: false });
     
     if (data) {
-        const projectsWithStatus = data.map(proj => {
+        const projectsWithVerifiedStatus = data.map(proj => {
             const items = proj.content_items || [];
-            const allVerified = items.length > 0 && items.every((i: any) => i.is_admin_verified);
+            const verifiedCount = items.filter((i: any) => i.is_admin_verified).length;
+            const allVerified = items.length > 0 && verifiedCount === items.length;
             return {
                 ...proj,
                 all_verified: allVerified,
                 total_items_count: items.length,
-                verified_count: items.filter((i: any) => i.is_admin_verified).length,
+                verified_count: verifiedCount,
                 completed_count: items.filter((i: any) => i.status === 'completed').length
             };
         });
-        setProjects(projectsWithStatus);
+        setProjects(projectsWithVerifiedStatus);
     }
   };
 
@@ -734,7 +735,7 @@ const Dashboard = () => {
                                     <span className="text-[10px] uppercase text-muted-foreground font-semibold flex items-center gap-1">
                                         <LayoutDashboard className="w-3 h-3" /> Scope
                                     </span>
-                                    <p className="text-sm font-medium">{project.total_contents} content items</p>
+                                    <p className="text-sm font-medium">{project.verified_count || 0} of {project.total_contents} verified</p>
                                 </div>
                             </div>
                         </CardContent>

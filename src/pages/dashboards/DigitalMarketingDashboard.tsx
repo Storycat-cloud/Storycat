@@ -92,9 +92,23 @@ const DigitalMarketingDashboard = () => {
   }, []);
 
   const fetchProjects = async () => {
-    // Only fetch active projects (assumed admin created)
-    const { data } = await supabase.from('projects').select('*').eq('status', 'active');
-    if (data) setProjects(data);
+    // Fetch projects and their content items to calculate progress
+    const { data } = await supabase
+        .from('projects')
+        .select('*, content_items(id, status)')
+        .eq('status', 'active');
+    
+    if (data) {
+        const projectsWithProgress = data.map(proj => {
+            const items = proj.content_items || [];
+            const plannedCount = items.filter((i: any) => i.status !== 'pending_dm').length;
+            return {
+                ...proj,
+                planned_count: plannedCount
+            };
+        });
+        setProjects(projectsWithProgress);
+    }
   };
 
   const fetchContentItems = async (projectId: string) => {
@@ -187,11 +201,12 @@ const DigitalMarketingDashboard = () => {
                 .update({
                     dm_title: ideaForm.dm_title,
                     dm_notes: ideaForm.dm_notes,
+                    status: 'pending_copy' // Automatically move to next stage
                 })
                 .eq('id', existingItem.id);
             error = updateError;
         } else {
-            // Create new item if allowed (strictly prompt says "view that calender", usually implies pre-filled slots, but let's allow adding if missing)
+            // Create new item
              const { error: insertError } = await supabase
                 .from('content_items')
                 .insert({
@@ -199,16 +214,17 @@ const DigitalMarketingDashboard = () => {
                     publish_date: dateString,
                     dm_title: ideaForm.dm_title,
                     dm_notes: ideaForm.dm_notes,
-                    status: 'pending_dm' 
+                    status: 'pending_copy' // Automatically move to next stage
                 });
              error = insertError;
         }
 
       if (error) throw error;
 
-      toast({ title: "Success", description: "Content idea saved." });
+      toast({ title: "Success", description: "Content submitted to Copywriter." });
       setIsIdeaDialogOpen(false);
-      fetchContentItems(selectedProject.id); // Refresh
+      fetchContentItems(selectedProject.id); // Refresh item details
+      fetchProjects(); // Refresh project list progress
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     }
@@ -276,7 +292,7 @@ const DigitalMarketingDashboard = () => {
                                     <BarChart3 className="w-5 h-5" />
                                 </div>
                                 <span className="px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
-                                    {project.total_contents} Posts
+                                    {project.planned_count || 0} of {project.total_contents} Done
                                 </span>
                             </div>
                             
@@ -335,14 +351,7 @@ const DigitalMarketingDashboard = () => {
                             selectedDate={selectedDate}
                          />
                          
-                         <div className="mt-8 flex justify-end pt-6 border-t border-white/5">
-                            <Button 
-                                onClick={handleCompletePlanning} 
-                                className="bg-primary text-black hover:bg-primary/90 font-bold h-12 px-8 text-lg shadow-[0_0_20px_rgba(234,179,8,0.3)] hover:shadow-[0_0_30px_rgba(234,179,8,0.5)] transition-all"
-                            >
-                                Complete Planning & Send to Copywriter
-                            </Button>
-                         </div>
+                         {/* Removed project-wide 'Complete Planning' button as tasks now move granularly */}
                      </Card>
 
                      {/* Additional Change Requests */}
@@ -518,7 +527,7 @@ const DigitalMarketingDashboard = () => {
             </div>
             <DialogFooter>
                 <Button onClick={handleSubmitIdea} className="w-full bg-primary text-black hover:bg-primary/90 font-bold h-12 text-lg shadow-[0_0_20px_rgba(234,179,8,0.3)]">
-                    Save to Calendar
+                    Submit to Copywriter
                 </Button>
             </DialogFooter>
         </DialogContent>

@@ -64,12 +64,15 @@ const CopywriterDashboard = () => {
             if (item.projects && !uniqueProjectsMap.has(item.projects.id)) {
                 uniqueProjectsMap.set(item.projects.id, {
                     ...item.projects,
-                    task_count: 1, // Start count
+                    drafted_count: 0,
+                    total_at_this_stage: 0,
                     earliest_deadline: item.publish_date
                 });
-            } else if (item.projects) {
-                const proj = uniqueProjectsMap.get(item.projects.id);
-                proj.task_count++;
+            }
+            const proj = uniqueProjectsMap.get(item.projects?.id);
+            if (proj) {
+                proj.total_at_this_stage++;
+                if (item.copy_content) proj.drafted_count++;
                 if (new Date(item.publish_date) < new Date(proj.earliest_deadline)) {
                     proj.earliest_deadline = item.publish_date;
                 }
@@ -86,10 +89,6 @@ const CopywriterDashboard = () => {
         .from('content_items')
         .select('*')
         .eq('project_id', project.id)
-        .in('status', ['pending_copy', 'rejected_from_copy_qc']) // Only show what they need to work on? Or all? User said "calender view will be open... give the same as digital marketing manager"
-        // If we want to show ALL items (even completed ones) in calendar, we should remove the status filter or make it wider.
-        // But for "Submit to QC", we need to know which ones are pending.
-        // Let's fetch active items for now to keep focus.
         .order('publish_date', { ascending: true });
       
       if (data) setProjectContent(data);
@@ -213,7 +212,7 @@ const CopywriterDashboard = () => {
                                                 <h3 className="font-bold text-2xl tracking-tight group-hover:text-primary transition-colors">{project.title}</h3>
                                             </div>
                                             <span className="px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
-                                                {project.task_count} Tasks
+                                                {project.drafted_count} of {project.total_at_this_stage} Drafted
                                             </span>
                                         </div>
                                         
@@ -261,26 +260,7 @@ const CopywriterDashboard = () => {
                         </Button>
                    </div>
                     
-                    {/* Submit Button */}
-                   <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                         <Button variant="hero" className="ml-2">
-                             <Send className="w-4 h-4 mr-2"/> Submit to QC
-                         </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                        <AlertDialogTitle>Submit Project for QC?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This will send ALL pending tasks in this project to the Quality Control stage. Ensure you have completed all drafts.
-                        </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={submitBatchToQC}>Submit Project</AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                   </AlertDialog>
+                    {/* Removed project-wide submit to QC as it's now granular */}
                 </div>
             </div>
 
@@ -428,7 +408,32 @@ const CopywriterDashboard = () => {
             )}
             <DialogFooter className="gap-2">
                 <Button variant="outline" onClick={() => setEditorOpen(false)}>Cancel</Button>
-                <Button onClick={handleSaveDraft}>Save Draft</Button>
+                <Button variant="outline" onClick={handleSaveDraft}>Save Draft</Button>
+                <Button 
+                    variant="hero"
+                    onClick={async () => {
+                        await handleSaveDraft();
+                        try {
+                            const { error } = await supabase
+                                .from('content_items')
+                                .update({
+                                    status: 'pending_copy_qc',
+                                    copy_submitted_at: new Date().toISOString()
+                                })
+                                .eq('id', selectedTask.id);
+                            
+                            if (error) throw error;
+                            toast({ title: "Submitted", description: "Sent to QC stage." });
+                            setEditorOpen(false);
+                            handleProjectClick(selectedProject);
+                            fetchProjects();
+                        } catch (error: any) {
+                            toast({ title: "Error", description: error.message, variant: "destructive" });
+                        }
+                    }}
+                >
+                    Submit to QC
+                </Button>
             </DialogFooter>
         </DialogContent>
       </Dialog>

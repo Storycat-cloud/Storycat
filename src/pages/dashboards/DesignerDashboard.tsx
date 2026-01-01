@@ -198,11 +198,10 @@ const DesignerDashboard = () => {
   };
 
   const fetchProjects = async () => {
-    // Only fetch projects that have items ready for design
+    // Fetch all items for active projects to calculate progress
     const { data: items } = await supabase
         .from('content_items')
-        .select('*, projects!inner(*)')
-        .in('status', ['pending_design', 'rejected_from_design_qc']); // Strict filter
+        .select('*, projects!inner(*)');
 
     if (items) {
         const uniqueProjectsMap = new Map();
@@ -210,14 +209,23 @@ const DesignerDashboard = () => {
             if (item.projects && !uniqueProjectsMap.has(item.projects.id)) {
                 uniqueProjectsMap.set(item.projects.id, {
                     ...item.projects,
-                    task_count: 1
+                    designed_count: 0,
+                    total_at_this_stage: 0
                 });
-            } else if (item.projects) {
-                const proj = uniqueProjectsMap.get(item.projects.id);
-                proj.task_count++;
+            }
+            const proj = uniqueProjectsMap.get(item.projects?.id);
+            if (proj) {
+                // Determine if this item is currently relevant to the designer's queue
+                // or if it should be counted in the "waiting" total
+                if (['pending_design', 'rejected_from_design_qc'].includes(item.status)) {
+                    proj.total_at_this_stage++;
+                }
+                if (item.design_asset_url && item.status !== 'pending_design' && item.status !== 'rejected_from_design_qc') {
+                   proj.designed_count++;
+                }
             }
         });
-        setProjects(Array.from(uniqueProjectsMap.values()));
+        setProjects(Array.from(uniqueProjectsMap.values()).filter(p => p.total_at_this_stage > 0 || p.designed_count > 0));
     }
   };
 
@@ -231,7 +239,6 @@ const DesignerDashboard = () => {
         .from('content_items')
         .select('*')
         .eq('project_id', projectId)
-        .in('status', ['pending_design', 'rejected_from_design_qc']) // Strict filter
         .order('publish_date', { ascending: true });
     
     if (data) setProjectContent(data);
@@ -412,7 +419,8 @@ const DesignerDashboard = () => {
           
           toast({ title: "Submitted", description: "Design sent to QC." });
           setSubmitDialogOpen(false);
-          fetchProjectContent(selectedProject.id); // Refresh (it should disappear)
+          fetchProjectContent(selectedProject.id);
+          fetchProjects();
 
       } catch (error: any) {
           toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -420,8 +428,8 @@ const DesignerDashboard = () => {
   };
 
   const stats = [
-    { label: "Active Project Tasks", value: projects.reduce((acc, p) => acc + p.task_count, 0).toString(), icon: LayoutDashboard, color: "text-primary" },
-    { label: "Pending Revision", value: "0", icon: AlertCircle, color: "text-red-500" }, // TODO: Filter logic
+    { label: "Tasks Waiting", value: projects.reduce((acc, p) => acc + p.total_at_this_stage, 0).toString(), icon: LayoutDashboard, color: "text-primary" },
+    { label: "Completed Designs", value: projects.reduce((acc, p) => acc + p.designed_count, 0).toString(), icon: CheckCircle2, color: "text-green-500" },
   ];
 
   // Get days that have content
@@ -610,8 +618,8 @@ const DesignerDashboard = () => {
                                     <span className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground mb-1 block">Project</span>
                                     <h3 className="font-bold text-2xl tracking-tight group-hover:text-primary transition-colors">{project.title}</h3>
                                 </div>
-                                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-500 border border-blue-500/20">
-                                    {project.task_count} Tasks Waiting
+                                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+                                    {project.designed_count} of {project.total_contents} Designed
                                 </span>
                             </div>
                             

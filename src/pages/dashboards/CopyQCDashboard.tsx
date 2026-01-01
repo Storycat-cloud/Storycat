@@ -59,15 +59,12 @@ const CopyQCDashboard = () => {
             if (item.projects && !uniqueProjectsMap.has(item.projects.id)) {
                 uniqueProjectsMap.set(item.projects.id, {
                     ...item.projects,
-                    task_count: 1, 
-                    earliest_deadline: item.publish_date
+                    pending_qc_count: 0
                 });
-            } else if (item.projects) {
-                const proj = uniqueProjectsMap.get(item.projects.id);
-                proj.task_count++;
-                if (new Date(item.publish_date) < new Date(proj.earliest_deadline)) {
-                    proj.earliest_deadline = item.publish_date;
-                }
+            }
+            const proj = uniqueProjectsMap.get(item.projects?.id);
+            if (proj) {
+                proj.pending_qc_count++;
             }
         });
         setProjects(Array.from(uniqueProjectsMap.values()));
@@ -203,8 +200,8 @@ const CopyQCDashboard = () => {
                                                 <span className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground mb-1 block">Project</span>
                                                 <h3 className="font-bold text-2xl tracking-tight group-hover:text-primary transition-colors">{project.title}</h3>
                                             </div>
-                                            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-500/10 text-orange-500 border border-orange-500/20">
-                                                {project.task_count} To Review
+                                            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+                                                {project.pending_qc_count} Tasks to Review
                                             </span>
                                         </div>
                                         

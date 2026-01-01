@@ -200,8 +200,8 @@ const DesignerQCDashboard = () => {
                                         <div className="p-3 bg-primary/10 rounded-xl">
                                             <FolderOpen className="w-8 h-8 text-primary" />
                                         </div>
-                                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-500 border border-blue-500/20">
-                                            {proj.items.length} To Review
+                                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+                                            {proj.items.length} Tasks to Review
                                         </span>
                                     </div>
                                     

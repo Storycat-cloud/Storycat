@@ -126,12 +126,11 @@ const Employees = () => {
 
   const handleDeleteEmployee = async (userId: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke('delete-user', {
-        body: { user_id: userId },
+      const { error } = await supabase.rpc('delete_employee', {
+        target_user_id: userId
       });
 
       if (error) throw error;
-      if (data.error) throw new Error(data.error);
 
       toast({
         title: "Success",
@@ -163,13 +162,15 @@ const Employees = () => {
     setCreateLoading(true);
 
     try {
-      // Call Supabase Edge Function to create user
-      const { data, error } = await supabase.functions.invoke('create-user', {
-        body: newEmployee,
+      // Call Supabase RPC to create user
+      const { data, error } = await supabase.rpc('create_employee', {
+        p_email: newEmployee.email,
+        p_password: newEmployee.password,
+        p_full_name: newEmployee.full_name,
+        p_role: newEmployee.role
       });
 
       if (error) throw error;
-      if (!data?.user) throw new Error("Failed to create user");
 
       toast({
         title: "Success",

@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -182,10 +183,41 @@ const Dashboard = () => {
   const [newProject, setNewProject] = useState({
     title: "",
     brief: "",
-    total_contents: 10,
     start_date: "",
     end_date: "",
+    content_counts: {} as Record<string, number>
   });
+  
+  const CONTENT_TYPES = [
+    "Posters", 
+    "Reels", 
+    "YouTube Videos", 
+    "Shorts", 
+    "Stories", 
+    "Carousels"
+  ];
+
+  const toggleContentType = (type: string) => {
+    setNewProject(prev => {
+      const newCounts = { ...prev.content_counts };
+      if (newCounts[type] !== undefined) {
+        delete newCounts[type]; // Uncheck/Remove
+      } else {
+        newCounts[type] = 5; // Default count when checked
+      }
+      return { ...prev, content_counts: newCounts };
+    });
+  };
+
+  const updateTypeCount = (type: string, count: number) => {
+    setNewProject(prev => ({
+      ...prev,
+      content_counts: {
+        ...prev.content_counts,
+        [type]: Math.max(1, count)
+      }
+    }));
+  };
   const [projects, setProjects] = useState<any[]>([]);
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [projectContent, setProjectContent] = useState<any[]>([]);
@@ -428,13 +460,24 @@ const Dashboard = () => {
   };
 
   const handleCreateProject = async () => {
+    // Validate
+    const totalItems = Object.values(newProject.content_counts).reduce((a, b) => a + b, 0);
+    if (totalItems === 0) {
+        toast({ title: "Error", description: "Please select at least one content type.", variant: "destructive" });
+        return;
+    }
+
     try {
-      const { data, error } = await supabase.functions.invoke('create-project', {
-        body: newProject
+      const { data, error } = await supabase.rpc('create_project_with_types', {
+        p_title: newProject.title,
+        p_brief: newProject.brief,
+        p_start_date: newProject.start_date,
+        p_end_date: newProject.end_date,
+        p_content_counts: newProject.content_counts,
+        p_created_by: user?.id
       });
 
       if (error) throw error;
-      if (data.error) throw new Error(data.error);
 
       toast({
         title: "Success",
@@ -442,6 +485,8 @@ const Dashboard = () => {
       });
       setIsCreateOpen(false);
       fetchProjects();
+      // Reset form
+      setNewProject({ title: "", brief: "", start_date: "", end_date: "", content_counts: {} });
     } catch (error: any) {
       console.error("Create Project error:", error);
       let msg = error.message || "Failed to create project";
@@ -526,10 +571,48 @@ const Dashboard = () => {
                   <Input id="end_date" type="date" value={newProject.end_date} onChange={(e) => setNewProject({...newProject, end_date: e.target.value})} />
                 </div>
               </div>
-               <div className="grid gap-2">
-                <Label htmlFor="total">Total Contents</Label>
-                <Input id="total" type="number" value={newProject.total_contents} onChange={(e) => setNewProject({...newProject, total_contents: parseInt(e.target.value)})} />
-              </div>
+                <div className="grid gap-2">
+                 <Label>Content Strategy</Label>
+                 <div className="grid grid-cols-1 gap-3 border rounded-lg p-4 bg-black/20">
+                    {CONTENT_TYPES.map(type => {
+                        const isChecked = newProject.content_counts[type] !== undefined;
+                        return (
+                            <div key={type} className="flex items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox 
+                                        id={`type-${type}`} 
+                                        checked={isChecked}
+                                        onCheckedChange={() => toggleContentType(type)}
+                                    />
+                                    <Label htmlFor={`type-${type}`} className="cursor-pointer">{type}</Label>
+                                </div>
+                                {isChecked && (
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-muted-foreground">Qty:</span>
+                                        <Input 
+                                            type="number" 
+                                            className="h-8 w-20 text-right" 
+                                            value={newProject.content_counts[type]} 
+                                            onChange={(e) => updateTypeCount(type, parseInt(e.target.value) || 0)}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                    {Object.keys(newProject.content_counts).length === 0 && (
+                        <p className="text-xs text-muted-foreground italic text-center py-2">Select content types to generate calendar</p>
+                    )}
+                    {Object.keys(newProject.content_counts).length > 0 && (
+                         <div className="pt-2 mt-2 border-t border-white/5 flex justify-between text-sm">
+                            <span className="font-semibold text-muted-foreground">Total Items:</span>
+                            <span className="font-bold text-primary">
+                                {Object.values(newProject.content_counts).reduce((a, b) => a + b, 0)}
+                            </span>
+                         </div>
+                    )}
+                 </div>
+               </div>
             </div>
             <DialogFooter>
               <Button onClick={handleCreateProject}>Create Project</Button>
@@ -802,11 +885,11 @@ const Dashboard = () => {
         </div>
       ) : (
       <>
-        <h2 className="text-xl font-bold mb-4">Active Projects</h2>
+        {projects.length > 0 && <h2 className="text-xl font-bold mb-4">Active Projects</h2>}
         {projects.length === 0 ? (
             <Card variant="glass" className="p-12 text-center">
             <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-6">
-                <Calendar className="w-8 h-8 text-primary" />
+                <CalendarIcon className="w-8 h-8 text-primary" />
             </div>
             <CardTitle className="text-xl mb-2">No Projects Yet</CardTitle>
             <p className="text-muted-foreground mb-6 max-w-md mx-auto">

@@ -116,6 +116,7 @@ const Auth = () => {
         await handleRedirect(data.user.id);
       }
     } catch (error: any) {
+      console.error("Full login error object:", error);
       let errorMessage = error.message;
       
       if (error.message.includes("User already registered")) {

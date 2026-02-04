@@ -40,19 +40,19 @@ const Auth = () => {
   };
 
   const handleRedirect = async (userId: string) => {
-      try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', userId)
-          .single();
-        
-        const path = getDashboardPath(profile?.role || 'employee');
-        navigate(path);
-      } catch (error) {
-        console.error("Error fetching profile:", error);
-        navigate("/dashboard");
-      }
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
+
+      const path = getDashboardPath(profile?.role || 'employee');
+      navigate(path);
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+      navigate("/dashboard");
+    }
   };
 
   useEffect(() => {
@@ -75,7 +75,7 @@ const Auth = () => {
   const validateForm = () => {
     try {
       const data = { email, password };
-      
+
       authSchema.parse(data);
       setErrors({});
       return true;
@@ -94,9 +94,9 @@ const Auth = () => {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
-    
+
     setLoading(true);
 
     try {
@@ -111,20 +111,20 @@ const Auth = () => {
         title: "Welcome back!",
         description: "You have successfully signed in.",
       });
-      
+
       if (data.user) {
         await handleRedirect(data.user.id);
       }
     } catch (error: any) {
       console.error("Full login error object:", error);
       let errorMessage = error.message;
-      
+
       if (error.message.includes("User already registered")) {
         errorMessage = "An account with this email already exists. Please sign in instead.";
       } else if (error.message.includes("Invalid login credentials")) {
         errorMessage = "Invalid email or password. Please try again.";
       }
-      
+
       toast({
         title: "Error",
         description: errorMessage,
@@ -147,10 +147,10 @@ const Auth = () => {
         <Card variant="glass" className="p-2">
           <CardHeader className="text-center pb-2">
             {/* Logo */}
-            <div className="flex justify-center mb-4">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/30">
-                <Cat className="w-8 h-8 text-primary-foreground" />
-              </div>
+            <div className="flex justify-center mb-6">
+              <span className="text-3xl font-black tracking-tighter uppercase italic text-white">
+                Story<span className="text-primary">cat</span>
+              </span>
             </div>
             <CardTitle className="text-2xl font-bold">
               Employee Login
@@ -159,11 +159,11 @@ const Auth = () => {
               Sign in to manage your workflows
             </CardDescription>
           </CardHeader>
-          
+
           <CardContent className="pt-4">
             <form onSubmit={handleAuth} className="space-y-4">
 
-              
+
               <div>
                 <Input
                   type="email"
@@ -176,7 +176,7 @@ const Auth = () => {
                   <p className="text-sm text-destructive mt-1">{errors.email}</p>
                 )}
               </div>
-              
+
               <div>
                 <Input
                   type="password"
@@ -190,10 +190,10 @@ const Auth = () => {
                 )}
               </div>
 
-              <Button 
-                type="submit" 
-                variant="hero" 
-                size="lg" 
+              <Button
+                type="submit"
+                variant="hero"
+                size="lg"
                 className="w-full"
                 disabled={loading}
               >

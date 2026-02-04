@@ -1,10 +1,11 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { 
-  LayoutDashboard, 
-  Users, 
+import {
+  LayoutDashboard,
+  Users,
   LogOut,
-  FolderOpen
+  FolderOpen,
+  BarChart3
 } from "lucide-react";
 import Logo from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,7 +46,7 @@ const Sidebar = () => {
       .select('role')
       .eq('id', userId)
       .single();
-    
+
     if (data) setRole(data.role);
   };
 
@@ -63,52 +64,61 @@ const Sidebar = () => {
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-64 bg-card border-r border-border p-6 flex flex-col z-50">
       <Logo />
-      
+
       <nav className="mt-10 flex-1 space-y-2">
-        <Button 
-          variant={isActive("/dashboard") || isActive("/dashboard/digital-marketing") ? "secondary" : "ghost"} 
+        <Button
+          variant={isActive("/dashboard") || isActive("/dashboard/digital-marketing") ? "secondary" : "ghost"}
           className="w-full justify-start gap-3"
           onClick={() => {
-             switch (role) {
-               case 'digital_marketing_manager':
-                   navigate("/dashboard/digital-marketing");
-                   break;
-               case 'copywriter':
-                   navigate("/dashboard/copywriter");
-                   break;
-               case 'copy_qc':
-                   navigate("/dashboard/copy-qc");
-                   break;
-               case 'designer':
-                   navigate("/dashboard/designer");
-                   break;
-               case 'designer_qc':
-                   navigate("/dashboard/designer-qc");
-                   break;
-               case 'admin':
-                   navigate("/dashboard");
-                   break;
-               default:
-                   navigate("/dashboard");
-             }
+            switch (role) {
+              case 'digital_marketing_manager':
+                navigate("/dashboard/digital-marketing");
+                break;
+              case 'copywriter':
+                navigate("/dashboard/copywriter");
+                break;
+              case 'copy_qc':
+                navigate("/dashboard/copy-qc");
+                break;
+              case 'designer':
+                navigate("/dashboard/designer");
+                break;
+              case 'designer_qc':
+                navigate("/dashboard/designer-qc");
+                break;
+              case 'admin':
+                navigate("/dashboard");
+                break;
+              default:
+                navigate("/dashboard");
+            }
           }}
         >
           <LayoutDashboard className="w-5 h-5" />
           Dashboard
         </Button>
-        
-        {role === 'admin' && (
-            <>
-                <Button 
-                variant={isActive("/dashboard/employees") ? "secondary" : "ghost"} 
-                className="w-full justify-start gap-3"
-                onClick={() => navigate("/dashboard/employees")}
-                >
-                <Users className="w-5 h-5" />
-                Team
-                </Button>
 
-            </>
+        {role === 'admin' && (
+          <>
+            <Button
+              variant={isActive("/dashboard/employees") ? "secondary" : "ghost"}
+              className="w-full justify-start gap-3"
+              onClick={() => navigate("/dashboard/employees")}
+            >
+              <Users className="w-5 h-5" />
+              Team
+            </Button>
+
+            <Button
+              variant={isActive("/dashboard/admin-metrics") ? "secondary" : "ghost"}
+              className="w-full justify-start gap-3"
+              onClick={() => navigate("/dashboard/admin-metrics")}
+            >
+              <BarChart3 className="w-5 h-5" />
+              Agency Metrics
+            </Button>
+
+          </>
         )}
       </nav>
 
@@ -121,7 +131,7 @@ const Sidebar = () => {
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-medium truncate">
-               {user?.user_metadata?.full_name || "User"}
+              {user?.user_metadata?.full_name || "User"}
             </p>
             <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
           </div>

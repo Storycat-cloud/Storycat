@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS public.projects (
 -- Project Onboarding (Dedicated Assignments)
 CREATE TABLE IF NOT EXISTS public.project_onboarding (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    project_id UUID REFERENCES public.projects(id) ON DELETE CASCADE,
+    project_id UUID UNIQUE REFERENCES public.projects(id) ON DELETE CASCADE,
     dedicated_dm_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     dedicated_copywriter_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     dedicated_copy_qc_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
